@@ -46,61 +46,63 @@ import org.testcontainers.utility.DockerImageName;
  * @author Prakhar Gupta
  * @author Peter-Josef Meisch
  */
-@SpringBootTest(classes = { ApplicationConfiguration.class, ElasticsearchOperationsTest.TestConfiguration.class })
+@SpringBootTest(classes = {ApplicationConfiguration.class, ElasticsearchOperationsTest.TestConfiguration.class})
 @Testcontainers
 class ElasticsearchOperationsTest {
 
-	private static final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-	@Container //
-	private static final ElasticsearchContainer container = new ElasticsearchContainer(
-			DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:8.7.0")) //
-			.withPassword("foobar") //
-			.withReuse(true);
+    private static final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
+//    @Container
+//    private static final ElasticsearchContainer container = new ElasticsearchContainer(
+//            DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:8.7.0")) //
+//            .withPassword("foobar") //
+//            .withReuse(true);
 
-	@Configuration
-	static class TestConfiguration extends ElasticsearchConfiguration {
-		@Override
-		public ClientConfiguration clientConfiguration() {
+    @Configuration
+    static class TestConfiguration extends ElasticsearchConfiguration {
+        @Override
+        public ClientConfiguration clientConfiguration() {
 
-			Assert.notNull(container, "TestContainer is not initialized!");
+//            Assert.notNull(container, "TestContainer is not initialized!");
 
-			return ClientConfiguration.builder() //
-					.connectedTo(container.getHttpHostAddress()) //
-					.usingSsl(container.createSslContextFromCa()) //
-					.withBasicAuth("elastic", "foobar") //
-					.build();
-		}
-	}
+//            return ClientConfiguration.builder() //
+//                    .connectedTo(container.getHttpHostAddress()) //
+//                    .usingSsl(container.createSslContextFromCa()) //
+//                    .withBasicAuth("elastic", "foobar") //
+//                    .build();
+            return ClientConfiguration.builder().connectedToLocalhost().build();
+        }
+    }
 
-	@Autowired ElasticsearchOperations operations;
+    @Autowired
+    ElasticsearchOperations operations;
 
-	@Test
-	void textSearch() throws ParseException {
+    @Test
+    void textSearch() throws ParseException {
 
-		var expectedDate = "2014-10-29";
-		var expectedWord = "java";
-		var query = new CriteriaQuery(
-				new Criteria("keywords").contains(expectedWord).and(new Criteria("date").greaterThanEqual(expectedDate)));
+        var expectedDate = "2014-10-29";
+        var expectedWord = "java";
+        var query = new CriteriaQuery(new Criteria("keywords").contains(expectedWord)
+                        .and(new Criteria("date").greaterThanEqual(expectedDate)));
 
-		var result = operations.search(query, Conference.class);
+        var result = operations.search(query, Conference.class);
 
-		assertThat(result).hasSize(3);
+        assertThat(result).hasSize(3);
 
-		for (var conference : result) {
-			assertThat(conference.getContent().getKeywords()).contains(expectedWord);
-			assertThat(format.parse(conference.getContent().getDate())).isAfter(format.parse(expectedDate));
-		}
-	}
+        for (var conference : result) {
+            assertThat(conference.getContent().getKeywords()).contains(expectedWord);
+            assertThat(format.parse(conference.getContent().getDate())).isAfter(format.parse(expectedDate));
+        }
+    }
 
-	@Test
-	void geoSpatialSearch() {
+    @Test
+    void geoSpatialSearch() {
 
-		var startLocation = new GeoPoint(50.0646501D, 19.9449799D);
-		var range = "330mi"; // or 530km
-		var query = new CriteriaQuery(new Criteria("location").within(startLocation, range));
+        var startLocation = new GeoPoint(50.0646501D, 19.9449799D);
+        var range = "330mi"; // or 530km
+        var query = new CriteriaQuery(new Criteria("location").within(startLocation, range));
 
-		var result = operations.search(query, Conference.class, IndexCoordinates.of("conference-index"));
+        var result = operations.search(query, Conference.class, IndexCoordinates.of("conference-index"));
 
-		assertThat(result).hasSize(2);
-	}
+        assertThat(result).hasSize(2);
+    }
 }
